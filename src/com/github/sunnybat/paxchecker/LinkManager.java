@@ -3,8 +3,10 @@ package com.github.sunnybat.paxchecker;
 import com.github.sunnybat.commoncode.audio.Sound;
 import com.github.sunnybat.commoncode.email.smtp.EmailAccount;
 import com.github.sunnybat.paxchecker.browser.Browser;
+import com.github.sunnybat.paxchecker.discord.DiscordNotifier;
 import com.github.sunnybat.paxchecker.status.Tickets;
 import java.awt.GraphicsEnvironment;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,11 +17,13 @@ import java.util.Set;
 public class LinkManager {
 
   private EmailAccount email;
+  private DiscordNotifier discord;
   private Set<String> linksOpened;
   private Sound alarm;
 
-  public LinkManager(EmailAccount email) {
+  public LinkManager(EmailAccount email, DiscordNotifier discord) {
     this.email = email;
+    this.discord = discord;
     linksOpened = new HashSet<>();
   }
 
@@ -32,11 +36,11 @@ public class LinkManager {
     this.alarm = alarm;
   }
 
-  public void openLink(String url, boolean sendEmail) {
-    openLink(url, sendEmail, "A new link has been found: " + url);
+  public void openLink(String url, boolean sendEmail, boolean sendDiscord) {
+    openLink(url, sendEmail, sendDiscord,"A new link has been found: " + url);
   }
 
-  public void openLink(String url, boolean sendEmail, String message) {
+  public void openLink(String url, boolean sendEmail, boolean sendDiscord, String message) {
     if (url != null && !hasOpenedLink(url)) {
       linksOpened.add(url);
       Browser.openLinkInBrowser(url);
@@ -53,6 +57,14 @@ public class LinkManager {
           email.sendMessage("PAXChecker", message);
         } catch (IllegalStateException e) { // In case we send too fast
           System.out.println("Unable to send email (" + e.getMessage() + ")");
+        }
+      }
+      if (discord != null && sendDiscord) {
+        try {
+          discord.postNotification(message);
+        } catch (Exception e) {
+          e.printStackTrace();
+          System.out.println(String.format("Unable to post to discord %s", e.getMessage()));
         }
       }
     }

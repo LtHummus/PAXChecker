@@ -121,4 +121,9 @@ public interface Setup {
    */
   public boolean shouldCheckForUpdatesDaily();
 
+  /**
+   * Discord webhook URL
+   */
+  public String getDiscordWebhookUrl();
+
 }

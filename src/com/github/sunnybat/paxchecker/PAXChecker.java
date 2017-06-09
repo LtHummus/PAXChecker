@@ -11,6 +11,7 @@ import com.github.sunnybat.paxchecker.check.CheckShowclix;
 import com.github.sunnybat.paxchecker.check.CheckShowclixEventPage;
 import com.github.sunnybat.paxchecker.check.TicketChecker;
 import com.github.sunnybat.paxchecker.check.TwitterStreamer;
+import com.github.sunnybat.paxchecker.discord.DiscordNotifier;
 import com.github.sunnybat.paxchecker.notification.NotificationHandler;
 import com.github.sunnybat.paxchecker.resources.ResourceDownloader;
 import com.github.sunnybat.paxchecker.setup.Setup;
@@ -222,7 +223,17 @@ public final class PAXChecker {
       myStatus.enableAlarm();
     }
     // SET UP CHECKERS
-    myLinkManager = new LinkManager(emailAccount);
+    DiscordNotifier dn = null;
+    try {
+      if (mySetup.getDiscordWebhookUrl() != null) {
+        dn = new DiscordNotifier(mySetup.getDiscordWebhookUrl());
+      }
+    } catch (Exception e) {
+      System.out.println("error when setting up discord.  is the webhook url correct?");
+      e.printStackTrace();
+    }
+
+    myLinkManager = new LinkManager(emailAccount, dn);
     TicketChecker myChecker = initChecker(mySetup, isHeadless ? null : (StatusGUI) myStatus, myExpo);
     if (mySetup.shouldCheckTwitter()) {
       TwitterStreamer tcheck = setupTwitter(myStatus, twitterTokens, mySetup.shouldTextTweets());
@@ -235,7 +246,7 @@ public final class PAXChecker {
     }
 
     // START CHECKING
-    checkForTickets(myStatus, myChecker, emailAccount, mySetup.timeBetweenChecks());
+    checkForTickets(myStatus, myChecker, emailAccount, dn, mySetup.timeBetweenChecks());
   }
 
   private static boolean hasArgument(String[] args, String argument) {
@@ -350,7 +361,7 @@ public final class PAXChecker {
 
       @Override
       public void linkFound(String link, String statusText) {
-        myLinkManager.openLink(link, textTweets, "Link found on Twitter: " + link + " -- Tweet Text: " + statusText);
+        myLinkManager.openLink(link, textTweets, true,"Link found on Twitter: " + link + " -- Tweet Text: " + statusText);
       }
     };
   }
@@ -365,13 +376,13 @@ public final class PAXChecker {
    * @param checkTime The time between checks
    * @throws NullPointerException if any arguments besides email are null
    */
-  private static void checkForTickets(Status status, TicketChecker checker, EmailAccount email, int checkTime) {
+  private static void checkForTickets(Status status, TicketChecker checker, EmailAccount email, DiscordNotifier dn, int checkTime) {
     if (checker.isCheckingAnything()) {
       while (true) {
         status.setLastCheckedText("Checking for Updates");
         long startTime = System.currentTimeMillis();
         if (checker.isUpdated()) {
-          myLinkManager.openLink(checker.getLinkFound(), true);
+          myLinkManager.openLink(checker.getLinkFound(), true, true);
         }
         status.setDataUsageText(DataTracker.getDataUsedMB());
         sleepLoop:
@@ -398,6 +409,15 @@ public final class PAXChecker {
                     }
                   } catch (IllegalStateException e) { // In case we send too fast
                     status.setInformationText("Unable to send test text (sent too fast?)");
+                  }
+                }
+
+                //@TODO: potentially break this out in to its own test
+                if (dn != null) {
+                  try {
+                    dn.postNotification("This is a test notification from PAX Checker");
+                  } catch (Exception e) {
+                    e.printStackTrace();
                   }
                 }
                 break;

@@ -29,6 +29,7 @@ public class SetupCLI implements Setup {
   private String consumerSecret;
   private String applicationKey;
   private String applicationSecret;
+  private String discordWebhookUrl;
 
   /**
    * Creates a new SetupCLI. Settings will be prompted for through the command-line.
@@ -157,6 +158,13 @@ public class SetupCLI implements Setup {
         textTweets = isResponseYes(myScanner);
       }
     }
+    System.out.println("Enable posting to a discord channel via webhook (Y/N)?");
+    if (isResponseYes(myScanner)) {
+      System.out.println("Discord webhook URL:");
+      discordWebhookUrl = myScanner.nextLine().trim();
+    } else {
+      discordWebhookUrl = null;
+    }
     System.out.print("Refresh Time (seconds, 10-120, numbers only): ");
     try {
       refreshTime = Integer.parseInt(myScanner.nextLine());
@@ -269,6 +277,11 @@ public class SetupCLI implements Setup {
   @Override
   public boolean shouldCheckForUpdatesDaily() {
     return checkUpdatesDaily;
+  }
+
+  @Override
+  public String getDiscordWebhookUrl() {
+    return discordWebhookUrl;
   }
 
 }

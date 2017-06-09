@@ -141,4 +141,9 @@ public class SetupAuto implements Setup {
     return hasArg("-dailyupdates");
   }
 
+  @Override
+  public String getDiscordWebhookUrl() {
+    return getArg("-discordwebhook");
+  }
+
 }
